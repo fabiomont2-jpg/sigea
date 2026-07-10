@@ -1,5 +1,11 @@
 from app import app, db, Laboratorio, User
 from werkzeug.security import generate_password_hash
+from app import app, db
+
+with app.app_context():
+    db.create_all()
+
+    # restante do código que cadastra os laboratórios
 
 def populate():
     with app.app_context():
