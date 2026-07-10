@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Resumo da Semana{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Resumo de Agendamentos (Semana Atual)</h2>
+    <button onclick="window.print()" class="btn btn-outline-secondary"><i class="bi bi-printer me-2"></i>Imprimir</button>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-bordered align-middle text-center">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 15%;">Turno</th>
+                {% for dia in resumo.keys() %}
+                <th>{{ dia.strftime('%d/%m') }}<br><small>{{ ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'][loop.index0] }}</small></th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for turno in ['Matutino', 'Vespertino', 'Noturno'] %}
+            <tr>
+                <td class="fw-bold bg-light">{{ turno }}</td>
+                {% for dia, turnos in resumo.items() %}
+                <td class="p-2" style="font-size: 0.85rem; min-height: 100px; vertical-align: top;">
+                    {% for a in turnos[turno] %}
+                    <div class="alert alert-success p-1 mb-1 border-0 shadow-sm text-start">
+                        <strong>{{ a.lab.nome }}</strong><br>
+                        <small>{{ a.instrutor }} ({{ a.turma }})</small>
+                    </div>
+                    {% endfor %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle me-2"></i>
+    Este resumo exibe apenas os agendamentos <strong>Confirmados</strong> para facilitar o lançamento no sistema de horários.
+</div>
+{% endblock %}

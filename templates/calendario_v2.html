@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário de Agendamentos{% endblock %}
+
+{% block head %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pt-br.js'></script>
+<style>
+    .turno-btn.active { background-color: #0056b3 !important; color: white !important; }
+    #calendar { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .fc-day-disabled { background-color: #f8f9fa !important; cursor: not-allowed; }
+    .category-title { background: #e9ecef; padding: 8px; font-weight: bold; margin-top: 15px; border-radius: 4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12 text-center">
+        <div class="btn-group shadow-sm" role="group">
+            <button type="button" class="btn btn-outline-primary turno-btn active" data-turno="Matutino">Manhã</button>
+            <button type="button" class="btn btn-outline-primary turno-btn" data-turno="Vespertino">Tarde</button>
+            <button type="button" class="btn btn-outline-primary turno-btn" data-turno="Noturno">Noite</button>
+        </div>
+    </div>
+</div>
+
+<div id="calendar"></div>
+
+<!-- Modal de Agendamento -->
+<div class="modal fade" id="agendarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Novo Agendamento - <span id="displayData"></span> (<span id="displayTurno"></span>)</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAgendar">
+                <input type="hidden" name="data" id="inputData">
+                <input type="hidden" name="turno" id="inputTurno">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">1. Escolha o Ambiente</label>
+                            <div class="overflow-auto" style="max-height: 400px; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px;">
+                                {% for cat, labs in categorias.items() %}
+                                    <div class="category-title">{{ cat }}</div>
+                                    {% for lab in labs %}
+                                    <div class="form-check my-2">
+                                        <input class="form-check-input" type="radio" name="lab_id" id="lab{{ lab.id }}" value="{{ lab.id }}" required>
+                                        <label class="form-check-label" for="lab{{ lab.id }}">{{ lab.nome }}</label>
+                                    </div>
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">2. Detalhes da Aula</label>
+                            <div class="mb-3">
+                                <label for="instrutor" class="form-label small">Nome do Instrutor</label>
+                                <input type="text" class="form-control" id="instrutor" name="instrutor" placeholder="Seu nome completo" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="turma" class="form-label small">Turma</label>
+                                <input type="text" class="form-control" id="turma" name="turma" placeholder="Ex: MEC-01" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="num_alunos" class="form-label small">Qtd. Alunos</label>
+                                <input type="number" class="form-control" id="num_alunos" name="num_alunos" required>
+                            </div>
+                            <div class="alert alert-info small mt-4">
+                                <i class="bi bi-info-circle me-2"></i>
+                                O agendamento ficará pendente de aprovação pela supervisão.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Solicitar Agendamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalhes/Admin -->
+<div class="modal fade" id="detalhesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalhes da Reserva</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalhesBody"></div>
+            {% if session.get('user_id') %}
+            <div class="modal-footer" id="adminFooter">
+                <button class="btn btn-success btn-acao" data-acao="aprovar">Aprovar</button>
+                <button class="btn btn-danger btn-acao" data-acao="rejeitar">Rejeitar</button>
+                <button class="btn btn-outline-danger btn-acao" data-acao="excluir">Excluir</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var currentTurno = 'Matutino';
+    var dataMin = '{{ data_min.isoformat() }}';
+    var dataMax = '{{ data_max.isoformat() }}';
+    var currentEventId = null;
+
+    var calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        locale: 'pt-br',
+        initialView: 'dayGridMonth',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+        events: '/api/eventos?turno=' + currentTurno,
+        validRange: { start: dataMin, end: moment(dataMax).add(1, 'days').format('YYYY-MM-DD') },
+        dateClick: function(info) {
+            document.getElementById('displayData').innerText = moment(info.dateStr).format('DD/MM/YYYY');
+            document.getElementById('displayTurno').innerText = currentTurno;
+            document.getElementById('inputData').value = info.dateStr;
+            document.getElementById('inputTurno').value = currentTurno;
+            new bootstrap.Modal(document.getElementById('agendarModal')).show();
+        },
+        eventClick: function(info) {
+            currentEventId = info.event.id;
+            var p = info.event.extendedProps;
+            document.getElementById('detalhesBody').innerHTML = `
+                <p><strong>Ambiente:</strong> ${p.lab}</p>
+                <p><strong>Professor:</strong> ${p.professor}</p>
+                <p><strong>Alunos:</strong> ${p.alunos}</p>
+                <p><strong>Status:</strong> <span class="badge ${p.status == 'Confirmado' ? 'bg-success' : 'bg-warning'}">${p.status}</span></p>
+            `;
+            new bootstrap.Modal(document.getElementById('detalhesModal')).show();
+        }
+    });
+    calendar.render();
+
+    // Troca de turno
+    document.querySelectorAll('.turno-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.turno-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentTurno = this.dataset.turno;
+            calendar.removeAllEventSources();
+            calendar.addEventSource('/api/eventos?turno=' + currentTurno);
+        });
+    });
+
+    // Envio do Formulário
+    document.getElementById('formAgendar').onsubmit = function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        fetch('/agendar', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        });
+    };
+
+    // Ações Admin
+    document.querySelectorAll('.btn-acao').forEach(btn => {
+        btn.onclick = function() {
+            var acao = this.dataset.acao;
+            fetch(`/admin/acao/${currentEventId}/${acao}`, { method: 'POST' })
+            .then(() => location.reload());
+        };
+    });
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+{% endblock %}

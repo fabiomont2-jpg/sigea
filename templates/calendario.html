@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário{% endblock %}
+
+{% block head %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pt-br.js'></script>
+<style>
+    #calendar {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .fc-event { cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h2>Calendário de Ocupação</h2>
+    </div>
+    <div class="col-md-6">
+        <select id="labFilter" class="form-select">
+            <option value="">Todos os Laboratórios</option>
+            {% for lab in labs %}
+            <option value="{{ lab.id }}">{{ lab.nome }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div id='calendar'></div>
+
+<!-- Modal de Detalhes -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Detalhes do Agendamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Professor:</strong> <span id="modalProf"></span></p>
+                <p><strong>Ambiente:</strong> <span id="modalLab"></span></p>
+                <p><strong>Curso:</strong> <span id="modalCurso"></span></p>
+                <p><strong>Status:</strong> <span id="modalStatus" class="badge"></span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var labFilter = document.getElementById('labFilter');
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'pt-br',
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: '/api/eventos',
+        eventClick: function(info) {
+            var props = info.event.extendedProps;
+            document.getElementById('modalTitle').innerText = info.event.title;
+            document.getElementById('modalProf').innerText = props.professor;
+            document.getElementById('modalLab').innerText = props.lab;
+            document.getElementById('modalCurso').innerText = props.curso || 'N/A';
+            
+            var statusEl = document.getElementById('modalStatus');
+            statusEl.innerText = props.status;
+            statusEl.className = 'badge ' + (props.status === 'Confirmado' ? 'bg-success' : 
+                                            props.status === 'Pendente' ? 'bg-warning' : 
+                                            props.status.includes('Espera') ? 'bg-secondary' : 'bg-danger');
+            
+            var modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            modal.show();
+        }
+    });
+    
+    calendar.render();
+    
+    labFilter.addEventListener('change', function() {
+        var labId = this.value;
+        calendar.removeAllEventSources();
+        calendar.addEventSource('/api/eventos' + (labId ? '?lab_id=' + labId : ''));
+    });
+});
+</script>
+{% endblock %}

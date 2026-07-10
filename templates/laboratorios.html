@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Laboratórios{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Nossos Ambientes</h2>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+    {% for lab in labs %}
+    <div class="col">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title fw-bold mb-0">{{ lab.nome }}</h5>
+                    <span class="badge bg-primary">{{ lab.local }}</span>
+                </div>
+                <p class="card-text text-muted">{{ lab.descricao }}</p>
+                <ul class="list-unstyled small mb-4">
+                    <li><i class="bi bi-people me-2"></i>Capacidade: {{ lab.capacidade }} alunos</li>
+                    <li><i class="bi bi-tools me-2"></i>Equipamentos: {{ lab.equipamentos or 'Não especificado' }}</li>
+                </ul>
+            </div>
+            <div class="card-footer bg-white border-0 pb-3">
+                <a href="{{ url_for('agendar') }}" class="btn btn-outline-primary w-100">Solicitar este Espaço</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
