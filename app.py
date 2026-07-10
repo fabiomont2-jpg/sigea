@@ -4,16 +4,23 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'sigea_secret_key_v2'
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
-app.config['SQLALCHEMY_DATABASE_URI'] = (
-    'sqlite:///' + os.path.join(BASE_DIR, 'sigea_v2.db')
+app.config["SECRET_KEY"] = os.getenv(
+    "SECRET_KEY",
+    "sigea_secret_key_v2"
 )
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv(
+    "DATABASE_URL",
+    "sqlite:///" + os.path.join(BASE_DIR, "sigea_v2.db")
+)
+
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
