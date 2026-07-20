@@ -14,7 +14,7 @@ app.config["SECRET_KEY"] = os.environ.get(
 
 database_url = os.environ.get(
     "DATABASE_URL",
-    "sqlite:///sigea_v2.db"
+    "sqlite:///sigea.db"
 )
 
 # Compatibilidade com PostgreSQL do Render
