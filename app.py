@@ -7,19 +7,19 @@ from functools import wraps
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY",
-    "sigea_secret_key_v2"
-)
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "sigea_secret_key_v2")
 
-database_url = os.environ.get(
-    "DATABASE_URL",
-    "sqlite:///sigea.db"
-)
+# Pega a variável de ambiente ou usa o SQLite como fallback
+database_url = os.environ.get("DATABASE_URL")
 
-# Compatibilidade com PostgreSQL do Render
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
+if not database_url:
+    # Garante o caminho absoluto para o PythonAnywhere
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    database_url = f"sqlite:///{os.path.join(basedir, 'sigea.db')}"
+else:
+    # Compatibilidade com PostgreSQL do Render (mantém seu código original)
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
